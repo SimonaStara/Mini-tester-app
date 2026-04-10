@@ -1,7 +1,7 @@
 import os
 import datetime
 import requests
-from flask import Flask, render_template, request, send_from_directory
+from flask import Flask, render_template, request
 
 app = Flask(__name__)
 SCREENSHOT_DIR = "static/screenshots"
@@ -30,12 +30,10 @@ DEVICE_PROFILES = {
     "iPhone 15 Plus": {"viewport": {"width": 430, "height": 932}, "scale": 3, "mobile": True},
     "iPhone 15 Pro": {"viewport": {"width": 393, "height": 852}, "scale": 3, "mobile": True},
     "iPhone 15 Pro Max": {"viewport": {"width": 430, "height": 932}, "scale": 3, "mobile": True},
-
     "iPad Mini": {"viewport": {"width": 768, "height": 1024}, "scale": 2, "mobile": True},
     "iPad Air": {"viewport": {"width": 820, "height": 1180}, "scale": 2, "mobile": True},
     "iPad Pro 11": {"viewport": {"width": 834, "height": 1194}, "scale": 2, "mobile": True},
     "iPad Pro 12.9": {"viewport": {"width": 1024, "height": 1366}, "scale": 2, "mobile": True},
-
     "Samsung S21": {"viewport": {"width": 1080, "height": 2400}, "scale": 3, "mobile": True},
     "Samsung S21 Ultra": {"viewport": {"width": 1440, "height": 3200}, "scale": 3, "mobile": True},
     "Samsung S22": {"viewport": {"width": 1080, "height": 2340}, "scale": 3, "mobile": True},
@@ -43,7 +41,7 @@ DEVICE_PROFILES = {
     "Samsung S23": {"viewport": {"width": 1080, "height": 2340}, "scale": 3, "mobile": True},
     "Samsung S23 Ultra": {"viewport": {"width": 1440, "height": 3088}, "scale": 3, "mobile": True},
     "Samsung S24": {"viewport": {"width": 1080, "height": 2340}, "scale": 3, "mobile": True},
-    "Samsung S24 Ultra": {"viewport": {"width": 1440, "height": 3120}, "scale": 3, "mobile": True},
+    "Samsung S24 Ultra": {"viewport": {"width": 1440, "height": 3120}, "scale": 3, "mobile": True}
 }
 
 @app.route("/")
@@ -54,20 +52,18 @@ def index():
         aliases=URL_ALIASES
     )
 
-# ✅ NOVÁ VERZE /run_test → přeposílá test na tvůj notebook
+# ✅ /run_test – pošle data do tvého NGROK agenta
 @app.route("/run_test", methods=["POST"])
 def run_test():
-
     data = request.form.to_dict()
 
-    # ✅ DOSAĎ TVŮJ IP A PORT
     LOCAL_AGENT_URL = "https://repeated-slashed-dynasty.ngrok-free.dev/run_test_local"
 
     try:
-        r = requests.post(LOCAL_AGENT_URL, json=data, timeout=20)
+        r = requests.post(LOCAL_AGENT_URL, json=data, timeout=10)
         return r.text
     except Exception as e:
         return f"❌ Lokální agent neodpovídá – je spuštěný? ({e})"
 
-if __name__ == "__main__":
-    app.run(debug=True)
+# ❗ NIC SE NEMÁ SPUSTIT LOKÁLNĚ
+# Railway musí používat gunicorn → ŽÁDNÉ app.run()
