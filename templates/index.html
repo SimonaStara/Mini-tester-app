@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Mini Tester – manuální GUI</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        .box { padding: 20px; border: 1px solid #ccc; width: 400px; }
+        button { padding: 10px; width: 100%; margin-top: 20px; font-size: 16px; }
+        input, select { width: 100%; padding: 6px; margin-bottom: 15px; }
+        h2 { margin-bottom: 10px; }
+    </style>
+</head>
+
+<body>
+
+<h2>✅ Mini Tester – manuální GUI</h2>
+
+<div class="box">
+    <form action="/run_test" method="POST">
+
+        <!-- Alias URL -->
+        <label>Předdefinované URL:</label>
+        <select name="alias">
+            <option value="none">— Vybrat ručně —</option>
+            {% for name, link in aliases.items() %}
+            <option value="{{ name }}">{{ name }}</option>
+            {% endfor %}
+        </select>
+
+        <!-- Ruční URL -->
+        <label>URL k testu:</label>
+        <input type="text" name="url" placeholder="https://example.com">
+
+        <!-- Název testu -->
+        <label>Název testu:</label>
+        <input type="text" name="test_name" placeholder="Můj test">
+
+        <!-- Zařízení -->
+        <label>Zařízení:</label>
+        <select name="device">
+            {% for d in devices %}
+            <option>{{ d }}</option>
+            {% endfor %}
+        </select>
+
+        <!-- Prohlížeč -->
+        <label>Prohlížeč:</label>
+        <select name="browser">
+            <option value="chromium">Chromium (doporučeno)</option>
+            <option value="firefox">Firefox</option>
+            <option value="webkit">Safari/WebKit</option>
+        </select>
+
+        <button type="submit">🚀 SPUSTIT TEST</button>
+
+    </form>
+</div>
+
+</body>
+</html>
