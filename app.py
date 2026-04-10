@@ -1,13 +1,13 @@
 import os
-import datetime
-import requests
+import uuid
 from flask import Flask, render_template, request
+from playwright.sync_api import sync_playwright
 
 app = Flask(__name__)
+
 SCREENSHOT_DIR = "static/screenshots"
 os.makedirs(SCREENSHOT_DIR, exist_ok=True)
 
-# URL aliasy
 URL_ALIASES = {
     "Seznam – homepage": "https://seznam.cz",
     "Google": "https://google.com",
@@ -15,55 +15,50 @@ URL_ALIASES = {
     "Mall – produkce": "https://mall.cz"
 }
 
-# Zařízení
 DEVICE_PROFILES = {
-    "iPhone SE": {"viewport": {"width": 375, "height": 667}, "scale": 2, "mobile": True},
-    "iPhone XR": {"viewport": {"width": 414, "height": 896}, "scale": 2, "mobile": True},
-    "iPhone 11": {"viewport": {"width": 414, "height": 896}, "scale": 2, "mobile": True},
     "iPhone 12": {"viewport": {"width": 390, "height": 844}, "scale": 3, "mobile": True},
-    "iPhone 12 Pro Max": {"viewport": {"width": 428, "height": 926}, "scale": 3, "mobile": True},
-    "iPhone 13": {"viewport": {"width": 390, "height": 844}, "scale": 3, "mobile": True},
-    "iPhone 13 Pro Max": {"viewport": {"width": 428, "height": 926}, "scale": 3, "mobile": True},
-    "iPhone 14": {"viewport": {"width": 393, "height": 852}, "scale": 3, "mobile": True},
-    "iPhone 14 Pro Max": {"viewport": {"width": 430, "height": 932}, "scale": 3, "mobile": True},
-    "iPhone 15": {"viewport": {"width": 393, "height": 852}, "scale": 3, "mobile": True},
-    "iPhone 15 Plus": {"viewport": {"width": 430, "height": 932}, "scale": 3, "mobile": True},
-    "iPhone 15 Pro": {"viewport": {"width": 393, "height": 852}, "scale": 3, "mobile": True},
-    "iPhone 15 Pro Max": {"viewport": {"width": 430, "height": 932}, "scale": 3, "mobile": True},
-    "iPad Mini": {"viewport": {"width": 768, "height": 1024}, "scale": 2, "mobile": True},
     "iPad Air": {"viewport": {"width": 820, "height": 1180}, "scale": 2, "mobile": True},
-    "iPad Pro 11": {"viewport": {"width": 834, "height": 1194}, "scale": 2, "mobile": True},
-    "iPad Pro 12.9": {"viewport": {"width": 1024, "height": 1366}, "scale": 2, "mobile": True},
-    "Samsung S21": {"viewport": {"width": 1080, "height": 2400}, "scale": 3, "mobile": True},
-    "Samsung S21 Ultra": {"viewport": {"width": 1440, "height": 3200}, "scale": 3, "mobile": True},
-    "Samsung S22": {"viewport": {"width": 1080, "height": 2340}, "scale": 3, "mobile": True},
-    "Samsung S22 Ultra": {"viewport": {"width": 1440, "height": 3088}, "scale": 3, "mobile": True},
     "Samsung S23": {"viewport": {"width": 1080, "height": 2340}, "scale": 3, "mobile": True},
-    "Samsung S23 Ultra": {"viewport": {"width": 1440, "height": 3088}, "scale": 3, "mobile": True},
-    "Samsung S24": {"viewport": {"width": 1080, "height": 2340}, "scale": 3, "mobile": True},
-    "Samsung S24 Ultra": {"viewport": {"width": 1440, "height": 3120}, "scale": 3, "mobile": True}
+    "Desktop HD": {"viewport": {"width": 1920, "height": 1080}, "scale": 1, "mobile": False},
 }
 
 @app.route("/")
 def index():
-    return render_template(
-        "index.html",
-        devices=list(DEVICE_PROFILES.keys()),
-        aliases=URL_ALIASES
-    )
+    return render_template("index.html",
+                           devices=list(DEVICE_PROFILES.keys()),
+                           aliases=URL_ALIASES)
 
-# ✅ /run_test – pošle data do tvého NGROK agenta
 @app.route("/run_test", methods=["POST"])
 def run_test():
-    data = request.form.to_dict()
+    url = request.form.get("url")
+    device = request.form.get("device")
 
-    LOCAL_AGENT_URL = "https://repeated-slashed-dynasty.ngrok-free.dev/run_test_local"
+    profile = DEVICE_PROFILES.get(device)
+    if not profile:
+        return "❌ Neznámé zařízení"
+
+    screenshot_name = f"screenshot_{uuid.uuid4()}.png"
+    screenshot_path = os.path.join(SCREENSHOT_DIR, screenshot_name)
 
     try:
-        r = requests.post(LOCAL_AGENT_URL, json=data, timeout=10)
-        return r.text
-    except Exception as e:
-        return f"❌ Lokální agent neodpovídá – je spuštěný? ({e})"
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            context = browser.new_context(
+                viewport=profile["viewport"],
+                device_scale_factor=profile["scale"],
+                is_mobile=profile["mobile"]
+            )
+            page = context.new_page()
+            page.goto(url, timeout=30000)
+            page.screenshot(path=screenshot_path, full_page=True)
+            browser.close()
 
-# ❗ NIC SE NEMÁ SPUSTIT LOKÁLNĚ
-# Railway musí používat gunicorn → ŽÁDNÉ app.run()
+        return f"""
+        ✅ Screenshot hotový!<br>
+        <a href='/static/screenshots/{screenshot_name}' target='_blank'>Otevřít obrázek</a>
+        """
+    except Exception as e:
+        return f"❌ Chyba během testu: {e}"
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8000)
