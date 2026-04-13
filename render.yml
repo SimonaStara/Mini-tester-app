@@ -1,0 +1,11 @@
+
+services:
+  - type: web
+    name: mini-tester
+    env: python
+    buildCommand: |
+      pip install -r requirements.txt
+      playwright install chromium
+      playwright install firefox
+      playwright install webkit
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
